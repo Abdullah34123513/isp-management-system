@@ -13,20 +13,107 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+model Admin {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+  username  String   @unique
+  password  String   // hashed password
+  email     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Router {
+  id                 String   @id @default(cuid())
+  host               String
+  apiUser            String
+  encryptedApiPassword String
+  label              String?
+  lastSync           DateTime?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  customers          Customer[]
+  activeSessions     ActiveSession[]
+}
+
+model Customer {
+  id          String      @id @default(cuid())
+  username    String      @unique
+  password    String      // stored as plain text for MikroTik sync (consider encryption in production)
+  status      CustomerStatus @default(ACTIVE)
+  planId      String?
+  routerId    String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  router      Router      @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  plan        Plan?       @relation(fields: [planId], references: [id])
+  invoices    Invoice[]
+  activeSessions ActiveSession[]
+}
+
+model Plan {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  price        Float
+  billingCycle BillingCycle
+  rateLimit    String?  // e.g., "10M/10M" for MikroTik
+  profileName  String?  // MikroTik PPP profile name
+  description  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  customers    Customer[]
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  customerId  String
+  amount      Float
+  dueDate     DateTime
+  status      InvoiceStatus @default(PENDING)
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  customer    Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model ActiveSession {
+  id          String   @id @default(cuid())
+  customerId  String
+  routerId    String
+  sessionId   String?  // MikroTik session ID
+  ipAddress   String?
+  uptime      String?  // e.g., "2h30m"
+  bytesIn     Int?
+  bytesOut    Int?
+  connectedAt DateTime?
+  disconnectedAt DateTime?
+  
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  router      Router   @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  
+  @@unique([customerId, routerId])
+}
+
+enum CustomerStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
 }

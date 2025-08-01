@@ -1,5 +1,6 @@
 // server.ts - Next.js Standalone + Socket.IO
-import { setupSocket } from '@/lib/socket';
+import { setupSocket } from './src/lib/socket';
+import { startOverdueInvoiceChecker } from './src/lib/overdue-checker';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import next from 'next';
@@ -42,10 +43,14 @@ async function createCustomServer() {
 
     setupSocket(io);
 
+    // Start the overdue invoice checker
+    startOverdueInvoiceChecker();
+
     // Start the server
     server.listen(currentPort, hostname, () => {
       console.log(`> Ready on http://${hostname}:${currentPort}`);
       console.log(`> Socket.IO server running at ws://${hostname}:${currentPort}/api/socketio`);
+      console.log(`> Overdue invoice checker started`);
     });
 
   } catch (err) {
