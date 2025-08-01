@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { MikroTikClient } from '@/lib/mikrotik';
+import bcrypt from 'bcryptjs';
 
 export async function GET(
   request: NextRequest,
@@ -54,7 +55,6 @@ export async function PUT(
     if (host !== undefined) updateData.host = host;
     if (apiUser !== undefined) updateData.apiUser = apiUser;
     if (apiPassword !== undefined) {
-      const bcrypt = require('bcryptjs');
       updateData.encryptedApiPassword = await bcrypt.hash(apiPassword, 12);
     }
     if (label !== undefined) updateData.label = label;
