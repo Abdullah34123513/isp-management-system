@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       data: {
         host,
         apiUser,
-        encryptedApiPassword,
+        encryptedApiPassword: encryptedPassword,
         label: label || host,
       }
     });
