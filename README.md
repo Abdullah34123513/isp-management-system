@@ -54,7 +54,7 @@ A comprehensive full-stack ISP management web application built with Next.js 15,
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Abdullah34123513/isp-management-system.git
    cd isp-management-system
    ```
 
@@ -117,7 +117,7 @@ The system comes pre-configured with three sample plans:
 1. **Install and Run**
    ```bash
    # Clone the repository
-   git clone <repository-url>
+   git clone https://github.com/Abdullah34123513/isp-management-system.git
    cd isp-management-system
    
    # Install dependencies
