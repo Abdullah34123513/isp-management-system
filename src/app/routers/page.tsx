@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, RefreshCw, Settings, Trash2, Wifi, WifiOff } from 'lucide-react';
+import { Plus, RefreshCw, Settings, Trash2, Wifi, WifiOff, Users } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Router {
   id: string;
@@ -95,7 +96,7 @@ export default function RoutersPage() {
   const handleSyncRouter = async (routerId: string) => {
     try {
       setIsSyncing(routerId);
-      const response = await fetch(`/api/routers/${routerId}`, {
+      const response = await fetch(`/api/routers/${routerId}/sync`, {
         method: 'POST'
       });
 
@@ -104,7 +105,8 @@ export default function RoutersPage() {
         throw new Error(errorData.error || 'Failed to sync router');
       }
 
-      setSuccess('Router synced successfully!');
+      const result = await response.json();
+      setSuccess(`Synced ${result.syncedCount} PPPoE users (${result.createdCount} new, ${result.updatedCount} updated)`);
       fetchRouters();
     } catch (error) {
       console.error('Error syncing router:', error);
@@ -308,18 +310,27 @@ export default function RoutersPage() {
                         <TableCell>{formatDate(router.lastSync)}</TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleSyncRouter(router.id)}
-                              disabled={isSyncing === router.id}
-                            >
-                              {isSyncing === router.id ? (
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <RefreshCw className="w-4 h-4" />
-                              )}
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSyncRouter(router.id)}
+                                    disabled={isSyncing === router.id}
+                                  >
+                                    {isSyncing === router.id ? (
+                                      <RefreshCw className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Users className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Sync PPPoE Users</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                             <Button
                               variant="outline"
                               size="sm"
