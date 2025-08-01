@@ -1,8 +1,6 @@
 import { Router } from '@/lib/db';
-
-// Temporarily disable RouterOS client due to import issues
-// TODO: Fix routeros-client import issues
-const RouterOSClient = null;
+import RouterOSClient from 'routeros-client';
+import bcrypt from 'bcryptjs';
 
 export interface PPPoESecret {
   id: string;
@@ -43,7 +41,28 @@ export class MikroTikClient {
     this.useRealAPI = RouterOSClient !== null;
   }
 
-  private async connect(): Promise<any> {
+  // Method to verify password by attempting to connect
+  private async verifyPassword(password: string): Promise<boolean> {
+    try {
+      // For testing purposes, we'll try to connect with the provided password
+      // In a real scenario, you'd need to handle this differently since bcrypt can't be decrypted
+      const testClient = new RouterOSClient({
+        host: this.router.host,
+        username: this.router.apiUser,
+        password: password,
+        port: 8728,
+        timeout: 5000
+      });
+
+      await testClient.connect();
+      await testClient.close();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  private async connect(password?: string): Promise<any> {
     if (!this.useRealAPI) {
       throw new Error('RouterOS client not available');
     }
@@ -53,12 +72,13 @@ export class MikroTikClient {
     }
 
     try {
-      // Note: In production, you'll need to decrypt the password
-      // For now, we'll use the encrypted password directly
+      // Use provided password or fall back to encrypted password (for testing)
+      const connectionPassword = password || this.router.encryptedApiPassword;
+      
       this.client = new RouterOSClient({
         host: this.router.host,
         username: this.router.apiUser,
-        password: this.router.encryptedApiPassword,
+        password: connectionPassword,
         port: 8728, // Default RouterOS API port
         timeout: 10000
       });
@@ -67,7 +87,7 @@ export class MikroTikClient {
       return this.client;
     } catch (error) {
       console.error('Failed to connect to RouterOS:', error);
-      throw new Error(`Failed to connect to router ${this.router.host}`);
+      throw new Error(`Failed to connect to router ${this.router.host}: ${error.message}`);
     }
   }
 
@@ -82,7 +102,7 @@ export class MikroTikClient {
     }
   }
 
-  private async makeRequest(command: string, params: Record<string, any> = {}): Promise<any[]> {
+  private async makeRequest(command: string, params: Record<string, any> = {}, password?: string): Promise<any[]> {
     const cacheKey = `${command}-${JSON.stringify(params)}`;
     const cached = this.cache.get(cacheKey);
     
@@ -92,7 +112,7 @@ export class MikroTikClient {
 
     try {
       if (this.useRealAPI) {
-        const client = await this.connect();
+        const client = await this.connect(password);
         
         // Build the command
         const cmd = [command];
@@ -201,8 +221,8 @@ export class MikroTikClient {
     }
   }
 
-  async getPPPoESecrets(): Promise<PPPoESecret[]> {
-    const response = await this.makeRequest('/ppp/secret/print');
+  async getPPPoESecrets(password?: string): Promise<PPPoESecret[]> {
+    const response = await this.makeRequest('/ppp/secret/print', {}, password);
     return response.map(item => ({
       id: item['.id'],
       name: item.name,
@@ -215,8 +235,8 @@ export class MikroTikClient {
     }));
   }
 
-  async getPPPoEActive(): Promise<PPPoEActive[]> {
-    const response = await this.makeRequest('/ppp/active/print');
+  async getPPPoEActive(password?: string): Promise<PPPoEActive[]> {
+    const response = await this.makeRequest('/ppp/active/print', {}, password);
     return response.map(item => ({
       id: item['.id'],
       name: item.name,
@@ -235,7 +255,7 @@ export class MikroTikClient {
     }));
   }
 
-  async addPPPoESecret(secret: Omit<PPPoESecret, 'id'>): Promise<void> {
+  async addPPPoESecret(secret: Omit<PPPoESecret, 'id'>, password?: string): Promise<void> {
     await this.makeRequest('/ppp/secret/add', {
       name: secret.name,
       password: secret.password,
@@ -244,13 +264,13 @@ export class MikroTikClient {
       'remote-address': secret.remoteAddress,
       disabled: secret.disabled.toString(),
       comment: secret.comment || ''
-    });
+    }, password);
     
     // Clear cache
     this.cache.clear();
   }
 
-  async updatePPPoESecret(id: string, updates: Partial<PPPoESecret>): Promise<void> {
+  async updatePPPoESecret(id: string, updates: Partial<PPPoESecret>, password?: string): Promise<void> {
     const params: Record<string, any> = {};
     
     if (updates.name !== undefined) params.name = updates.name;
@@ -264,31 +284,31 @@ export class MikroTikClient {
     await this.makeRequest('/ppp/secret/set', {
       '.id': id,
       ...params
-    });
+    }, password);
     
     // Clear cache
     this.cache.clear();
   }
 
-  async removePPPoESecret(id: string): Promise<void> {
+  async removePPPoESecret(id: string, password?: string): Promise<void> {
     await this.makeRequest('/ppp/secret/remove', {
       '.id': id
-    });
+    }, password);
     
     // Clear cache
     this.cache.clear();
   }
 
-  async disconnectPPPoESession(id: string): Promise<void> {
+  async disconnectPPPoESession(id: string, password?: string): Promise<void> {
     await this.makeRequest('/ppp/active/remove', {
       '.id': id
-    });
+    }, password);
     
     // Clear cache
     this.cache.clear();
   }
 
-  async testConnection(): Promise<boolean> {
+  async testConnection(password?: string): Promise<boolean> {
     try {
       if (!this.useRealAPI) {
         // If real API is not available, we cannot test real connections
@@ -297,7 +317,7 @@ export class MikroTikClient {
         return false;
       }
       
-      await this.makeRequest('/system/resource/print');
+      await this.makeRequest('/system/resource/print', {}, password);
       return true;
     } catch (error) {
       console.error('Connection test failed:', error);
@@ -311,7 +331,7 @@ export class MikroTikClient {
   }
 
   // New method to get connection status details
-  async getConnectionStatus(): Promise<{
+  async getConnectionStatus(password?: string): Promise<{
     connected: boolean;
     usingRealAPI: boolean;
     message: string;
@@ -325,7 +345,7 @@ export class MikroTikClient {
     }
 
     try {
-      await this.makeRequest('/system/resource/print');
+      await this.makeRequest('/system/resource/print', {}, password);
       return {
         connected: true,
         usingRealAPI: true,

@@ -34,6 +34,8 @@ export default function RoutersPage() {
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
+  const [syncPassword, setSyncPassword] = useState('');
+  const [showSyncDialog, setShowSyncDialog] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -104,10 +106,24 @@ export default function RoutersPage() {
   };
 
   const handleSyncRouter = async (routerId: string) => {
+    setShowSyncDialog(routerId);
+    setSyncPassword('');
+  };
+
+  const confirmSync = async () => {
+    if (!showSyncDialog || !syncPassword) {
+      setError('API password is required for sync');
+      return;
+    }
+
     try {
-      setIsSyncing(routerId);
-      const response = await fetch(`/api/routers/${routerId}/sync`, {
-        method: 'POST'
+      setIsSyncing(showSyncDialog);
+      const response = await fetch(`/api/routers/${showSyncDialog}/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ apiPassword: syncPassword })
       });
 
       if (!response.ok) {
@@ -118,6 +134,8 @@ export default function RoutersPage() {
       const result = await response.json();
       setSuccess(`Synced ${result.syncedCount} PPPoE users (${result.createdCount} new, ${result.updatedCount} updated)`);
       fetchRouters();
+      setShowSyncDialog(null);
+      setSyncPassword('');
     } catch (error) {
       console.error('Error syncing router:', error);
       setError(error instanceof Error ? error.message : 'Failed to sync router');
@@ -256,6 +274,49 @@ export default function RoutersPage() {
                       <Button type="submit">Add Router</Button>
                     </DialogFooter>
                   </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* Sync Dialog */}
+              <Dialog open={!!showSyncDialog} onOpenChange={(open) => !open && setShowSyncDialog(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Sync PPPoE Users</DialogTitle>
+                    <DialogDescription>
+                      Enter the API password to sync PPPoE users from the router
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="syncPassword" className="text-right">
+                        API Password
+                      </Label>
+                      <Input
+                        id="syncPassword"
+                        type="password"
+                        placeholder="••••••••"
+                        value={syncPassword}
+                        onChange={(e) => setSyncPassword(e.target.value)}
+                        className="col-span-3"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowSyncDialog(null)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={confirmSync} disabled={isSyncing === showSyncDialog}>
+                      {isSyncing === showSyncDialog ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Syncing...
+                        </>
+                      ) : (
+                        'Sync Users'
+                      )}
+                    </Button>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
             </div>

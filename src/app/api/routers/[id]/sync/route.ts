@@ -15,6 +15,7 @@ export async function POST(
     }
 
     const routerId = params.id;
+    const { apiPassword } = await request.json();
 
     // Find the router
     const router = await db.router.findUnique({
@@ -25,11 +26,15 @@ export async function POST(
       return NextResponse.json({ error: 'Router not found' }, { status: 404 });
     }
 
+    if (!apiPassword) {
+      return NextResponse.json({ error: 'API password is required for sync' }, { status: 400 });
+    }
+
     // Create MikroTik client
     const mikrotikClient = new MikroTikClient(router);
 
     // Test connection and get status
-    const connectionStatus = await mikrotikClient.getConnectionStatus();
+    const connectionStatus = await mikrotikClient.getConnectionStatus(apiPassword);
 
     // Check if we're using real API or mock data
     if (!connectionStatus.usingRealAPI) {
@@ -46,7 +51,7 @@ export async function POST(
     }
 
     // Fetch PPPoE secrets from router
-    const secrets = await mikrotikClient.getPPPoESecrets();
+    const secrets = await mikrotikClient.getPPPoESecrets(apiPassword);
     
     let syncedCount = 0;
     let updatedCount = 0;

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     };
 
     const mikrotikClient = new MikroTikClient(testRouter as any);
-    const connectionStatus = await mikrotikClient.getConnectionStatus();
+    const connectionStatus = await mikrotikClient.getConnectionStatus(apiPassword);
 
     // Check if we're using real API or mock data
     if (!connectionStatus.usingRealAPI) {
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     // Sync PPPoE secrets from the router
     try {
-      const secrets = await mikrotikClient.getPPPoESecrets();
+      const secrets = await mikrotikClient.getPPPoESecrets(apiPassword);
       
       for (const secret of secrets) {
         await db.customer.upsert({
