@@ -1,0 +1,13 @@
+
+> nextjs_tailwind_shadcn_ts@0.1.0 dev
+> next dev 2>&1 | tee dev.log
+
+ ⚠ Port 3000 is in use, using available port 3001 instead.
+   ▲ Next.js 15.3.5
+   - Local:        http://localhost:3001
+   - Network:      http://10.249.13.104:3001
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 1912ms
+[?25h

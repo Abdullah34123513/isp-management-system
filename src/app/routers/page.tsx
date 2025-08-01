@@ -29,7 +29,7 @@ interface Router {
 }
 
 export default function RoutersPage() {
-  const router = useRouter();
+  const nextRouter = useRouter();
   const [routers, setRouters] = useState<Router[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -405,7 +405,7 @@ export default function RoutersPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => router.push(`/routers/${router.id}`)}
+                              onClick={() => nextRouter.push(`/routers/${router.id}`)}
                             >
                               <Settings className="w-4 h-4" />
                             </Button>

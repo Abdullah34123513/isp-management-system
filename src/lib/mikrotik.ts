@@ -1,6 +1,12 @@
 import { Router } from '@/lib/db';
-import RouterOSClient from 'routeros-client';
-import bcrypt from 'bcryptjs';
+
+// Try to import RouterOS client, but fall back gracefully if it fails
+let RouterOSClient: any = null;
+try {
+  RouterOSClient = require('routeros-client').RouterOSClient;
+} catch (error: any) {
+  console.warn('RouterOS client not available, using mock data only:', error.message);
+}
 
 export interface PPPoESecret {
   id: string;
@@ -85,7 +91,7 @@ export class MikroTikClient {
 
       await this.client.connect();
       return this.client;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to connect to RouterOS:', error);
       throw new Error(`Failed to connect to router ${this.router.host}: ${error.message}`);
     }
@@ -351,7 +357,7 @@ export class MikroTikClient {
         usingRealAPI: true,
         message: 'Successfully connected to real RouterOS device'
       };
-    } catch (error) {
+    } catch (error: any) {
       return {
         connected: false,
         usingRealAPI: true,
