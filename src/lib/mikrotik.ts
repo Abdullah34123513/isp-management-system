@@ -65,6 +65,21 @@ export class MikroTikClient {
   private async getMockData(command: string, params: Record<string, any>): Promise<any[]> {
     // Mock implementation - replace with actual RouterOS API calls
     switch (command) {
+      case '/system/resource/print':
+        return [
+          {
+            'cpu-frequency': '600MHz',
+            'cpu-count': '1',
+            'cpu-load': '10',
+            'free-memory': '1000000',
+            'total-memory': '2000000',
+            'free-hdd-space': '1000000',
+            'total-hdd-space': '2000000',
+            'uptime': '2d3h4m5s',
+            'version': '6.47.9'
+          }
+        ];
+      
       case '/ppp/secret/print':
         return [
           {
