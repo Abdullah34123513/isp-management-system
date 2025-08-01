@@ -78,7 +78,17 @@ export default function RoutersPage() {
         throw new Error(errorData.error || 'Failed to add router');
       }
 
-      setSuccess('Router added successfully!');
+      const result = await response.json();
+      
+      // Check if router was added with mock data
+      if (result.warning) {
+        setSuccess(`Router added with warning: ${result.warning}`);
+      } else if (result.message) {
+        setSuccess(`Router added successfully: ${result.message}`);
+      } else {
+        setSuccess('Router added successfully!');
+      }
+      
       setIsAddDialogOpen(false);
       setFormData({ host: '', apiUser: '', apiPassword: '', label: '' });
       fetchRouters();

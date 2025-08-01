@@ -58,10 +58,17 @@ export async function POST(request: NextRequest) {
     };
 
     const mikrotikClient = new MikroTikClient(testRouter as any);
-    const isConnected = await mikrotikClient.testConnection();
+    const connectionStatus = await mikrotikClient.getConnectionStatus();
 
-    if (!isConnected) {
-      return NextResponse.json({ error: 'Failed to connect to router' }, { status: 400 });
+    // Check if we're using real API or mock data
+    if (!connectionStatus.usingRealAPI) {
+      // If we're using mock data, we'll allow the router to be added but with a warning
+      console.warn('Adding router with mock data only - real RouterOS API not available');
+    } else if (!connectionStatus.connected) {
+      // If we're using real API but connection failed, return an error
+      return NextResponse.json({ 
+        error: `Failed to connect to router: ${connectionStatus.message}` 
+      }, { status: 400 });
     }
 
     // Encrypt the API password before storing
@@ -76,6 +83,15 @@ export async function POST(request: NextRequest) {
         label: label || host,
       }
     });
+
+    // If we're using mock data, add a note to the response
+    const response: any = { router };
+    if (!connectionStatus.usingRealAPI) {
+      response.warning = 'Router added using mock data only. Real RouterOS API is not available.';
+      response.mockData = true;
+    } else {
+      response.message = connectionStatus.message;
+    }
 
     // Sync PPPoE secrets from the router
     try {
@@ -108,7 +124,7 @@ export async function POST(request: NextRequest) {
       // Don't fail the router creation if sync fails
     }
 
-    return NextResponse.json(router);
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error creating router:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -28,10 +28,21 @@ export async function POST(
     // Create MikroTik client
     const mikrotikClient = new MikroTikClient(router);
 
+    // Test connection and get status
+    const connectionStatus = await mikrotikClient.getConnectionStatus();
+
+    // Check if we're using real API or mock data
+    if (!connectionStatus.usingRealAPI) {
+      return NextResponse.json({ 
+        error: 'Cannot sync: RouterOS API not available. Using mock data only.' 
+      }, { status: 400 });
+    }
+
     // Test connection
-    const isConnected = await mikrotikClient.testConnection();
-    if (!isConnected) {
-      return NextResponse.json({ error: 'Failed to connect to router' }, { status: 400 });
+    if (!connectionStatus.connected) {
+      return NextResponse.json({ 
+        error: `Failed to connect to router: ${connectionStatus.message}` 
+      }, { status: 400 });
     }
 
     // Fetch PPPoE secrets from router

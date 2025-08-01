@@ -290,10 +290,53 @@ export class MikroTikClient {
 
   async testConnection(): Promise<boolean> {
     try {
+      if (!this.useRealAPI) {
+        // If real API is not available, we cannot test real connections
+        // Return false to indicate we cannot actually test the connection
+        console.warn('Real RouterOS API not available - cannot test actual connection');
+        return false;
+      }
+      
       await this.makeRequest('/system/resource/print');
       return true;
     } catch (error) {
+      console.error('Connection test failed:', error);
       return false;
+    }
+  }
+
+  // New method to check if we're using real API or mock data
+  isUsingRealAPI(): boolean {
+    return this.useRealAPI;
+  }
+
+  // New method to get connection status details
+  async getConnectionStatus(): Promise<{
+    connected: boolean;
+    usingRealAPI: boolean;
+    message: string;
+  }> {
+    if (!this.useRealAPI) {
+      return {
+        connected: false,
+        usingRealAPI: false,
+        message: 'RouterOS client not available - using mock data only'
+      };
+    }
+
+    try {
+      await this.makeRequest('/system/resource/print');
+      return {
+        connected: true,
+        usingRealAPI: true,
+        message: 'Successfully connected to real RouterOS device'
+      };
+    } catch (error) {
+      return {
+        connected: false,
+        usingRealAPI: true,
+        message: `Failed to connect: ${error.message}`
+      };
     }
   }
 
